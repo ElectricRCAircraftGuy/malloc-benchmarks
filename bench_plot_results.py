@@ -28,7 +28,7 @@ def plot_graphs(outfilename, benchmark_dict):
     plt.figure()
     plt.clf()
     # main figure title
-    plt.suptitle("Malloc speed tests (tested w/glibc's `benchtests/bench-malloc-thread.c`)")
+    plt.suptitle("Malloc speed tests (on both plots, LOWER IS BETTER!)")
 
     rows = 2
     cols = 1
@@ -40,7 +40,8 @@ def plot_graphs(outfilename, benchmark_dict):
     plt.subplot(rows, cols, 1)
 
     # figure subtitle
-    plt.title("num bytes per malloc: min = {}; max = {}".format(data_dict["min_size"],
+    plt.title("(tested w/glibc's `benchtests/bench-malloc-thread.c`)\n" +
+        "num bytes per malloc op: min = {}; max = {}".format(data_dict["min_size"],
         data_dict["max_size"]), fontsize=10, pad=30) # more `pad` shifts the subtitle UP more
 
     plt.grid(alpha=.5) # alpha=0 is fully transparent; 1 is fully opaque
