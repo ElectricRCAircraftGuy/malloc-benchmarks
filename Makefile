@@ -7,8 +7,7 @@
 # 1. GNU libc
 # 2. Google perftools (tcmalloc)
 # 3. jemalloc
-# 4. fast_malloc with a 1 MiB heap
-# 5. fast_malloc with a 1 GiB heap
+# 4. fast_malloc
 #
 # First tested with these versions:
 # 1. GNU libc 2.26
@@ -20,7 +19,6 @@
 # 2. Google perftools (tcmalloc) 2.9.1
 # 3. jemalloc 5.2.1-742
 # 4. fast_malloc 0.1.0
-# 5. fast_malloc 0.1.0
 #
 #
 # References:
