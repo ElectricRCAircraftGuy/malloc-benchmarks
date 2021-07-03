@@ -18,6 +18,11 @@
 # 2. Google perftools (tcmalloc) 2.9.1
 # 3. jemalloc 5.2.1-742
 #
+#
+# References:
+# 1. How to use bash if/else statements inside makefiles:
+#    https://stackoverflow.com/a/58602879/4561887
+#
 
 #
 # Parameters from command line
@@ -103,20 +108,52 @@ jemalloc_install_dir := $(topdir)/jemalloc-install
 
 all: download build collect_results plot_results
 
+
 download:
-	@echo "Downloading [$(implem_list)] malloc implementations"
+	@echo "Downloading & updating these malloc implementations: [$(implem_list)]"
+
+# system_default (include this for completeness)
+	@echo "-----"
+ifeq ($(findstring system_default,$(implem_list)),system_default)
+	@echo "system_default already ready"
+endif
+
+# glibc
+	@echo "-----"
 ifeq ($(findstring glibc,$(implem_list)),glibc)
 ifeq ($(use_git),1)
-	@[ ! -d glibc ] && git clone $(glibc_url) || echo "glibc GIT repo seems to be already there"
+	@if [ ! -d glibc ]; then \
+		git clone $(glibc_url); \
+	else \
+		echo "glibc GIT repo is already downloaded; pulling latest"; \
+		cd "glibc" && git pull; \
+	fi
 else
-	@[ ! -d glibc ] && ( wget $(glibc_alt_wget_url) && tar xvf glibc-$(glibc_version).tar.xz && mv glibc-$(glibc_version) glibc ) || echo "glibc GIT repo seems to be already there"
+	@[ ! -d glibc ] && ( wget $(glibc_alt_wget_url) && tar xvf glibc-$(glibc_version).tar.xz \
+		&& mv glibc-$(glibc_version) glibc ) || echo "glibc GIT repo seems to be already there"
 endif
 endif
+
+# tcmalloc
+	@echo "-----"
 ifeq ($(findstring tcmalloc,$(implem_list)),tcmalloc)
-	@[ ! -d gperftools ] && git clone $(tcmalloc_url) || echo "Google perftools GIT repo seems to be already there"
+	@if [ ! -d gperftools ]; then \
+		git clone $(tcmalloc_url); \
+	else \
+		echo "Google perftools (tcmalloc) GIT repo is already downloaded; pulling latest"; \
+		cd "gperftools" && git pull; \
+	fi
 endif
+
+# jemalloc
+	@echo "-----"
 ifeq ($(findstring jemalloc,$(implem_list)),jemalloc)
-	@[ ! -d jemalloc ] && git clone $(jemalloc_url) || echo "Jemalloc GIT repo seems to be already there"
+	@if [ ! -d jemalloc ]; then \
+		git clone $(jemalloc_url); \
+	else \
+		echo "jemalloc GIT repo is already downloaded; pulling latest"; \
+		cd "jemalloc" && git pull; \
+	fi
 endif
 
 
