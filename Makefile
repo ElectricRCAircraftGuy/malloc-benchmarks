@@ -7,6 +7,8 @@
 # 1. GNU libc
 # 2. Google perftools (tcmalloc)
 # 3. jemalloc
+# 4. fast_malloc with a 1 MiB heap
+# 5. fast_malloc with a 1 GiB heap
 #
 # First tested with these versions:
 # 1. GNU libc 2.26
@@ -17,6 +19,8 @@
 # 1. GNU libc 2.31
 # 2. Google perftools (tcmalloc) 2.9.1
 # 3. jemalloc 5.2.1-742
+# 4. fast_malloc 0.1.0
+# 5. fast_malloc 0.1.0
 #
 #
 # References:
@@ -67,7 +71,7 @@ ifdef IMPLEMENTATIONS
 implem_list := $(IMPLEMENTATIONS)
 else
 # default value
-implem_list := system_default glibc tcmalloc jemalloc
+implem_list := system_default glibc tcmalloc jemalloc fast_malloc
 endif
 
 
@@ -82,18 +86,22 @@ topdir=$(shell readlink -f .)
 benchmark_result_json := results.json # the suffix for the json file names
 benchmark_result_png := results.png
 
+# Source repos (required for ALL malloc implementations)
 glibc_url := git://sourceware.org/git/glibc.git
 tcmalloc_url := https://github.com/gperftools/gperftools.git
 jemalloc_url := https://github.com/jemalloc/jemalloc.git
-
+fast_malloc_url := git@github.com:ElectricRCAircraftGuy/fast_malloc.git
+# - - - -
 # Alternate download version and source if not using the git repo above
 glibc_version := 2.26
 glibc_alt_wget_url := https://ftpmirror.gnu.org/libc/glibc-$(glibc_version).tar.xz
 
+# Build and install directories (required only on a repo-by-repo basis)
 glibc_build_dir := $(topdir)/glibc-build
 glibc_install_dir := $(topdir)/glibc-install
 tcmalloc_install_dir := $(topdir)/tcmalloc-install
 jemalloc_install_dir := $(topdir)/jemalloc-install
+# not required for fast_malloc
 
 
 #
@@ -153,6 +161,17 @@ ifeq ($(findstring jemalloc,$(implem_list)),jemalloc)
 	else \
 		echo "jemalloc GIT repo is already downloaded; pulling latest"; \
 		cd "jemalloc" && git pull; \
+	fi
+endif
+
+# fast_malloc
+	@echo "-----"
+ifeq ($(findstring fast_malloc,$(implem_list)),fast_malloc)
+	@if [ ! -d fast_malloc ]; then \
+		git clone $(fast_malloc_url); \
+	else \
+		echo "fast_malloc GIT repo is already downloaded; pulling latest"; \
+		cd "fast_malloc" && git pull; \
 	fi
 endif
 

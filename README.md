@@ -46,7 +46,7 @@ RESULT_DIRNAME='results/my_dir_name' make plot_results
 
 Note that each time you run `make`, all of the benchmark results will be stored in a folder for your computer within the `results` dir.
 
-You can customize the runs be setting environment variables as you call `make`. See the top of the `Makefile` for details. See the default values for `benchmark_nthreads` and `implem_list` in the `Makefile`.  
+You can customize the runs by setting environment variables as you call `make`. See the top of the `Makefile` for details. See the default values for `benchmark_nthreads` and `implem_list` in the `Makefile`.  
 
 Examples:
 ```bash

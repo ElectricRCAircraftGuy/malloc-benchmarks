@@ -1,12 +1,16 @@
 benchmark-src/bench-malloc-thread
 benchmark-src/*.o
+
+# malloc implementation folders
 glibc-build/
 glibc-install/
 glibc/
 gperftools/
+tcmalloc-install/
 jemalloc-install/
 jemalloc/
-tcmalloc-install/
+fast_malloc/
+
 *.json
 *.png
 .cproject
