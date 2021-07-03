@@ -24,6 +24,8 @@
 # References:
 # 1. How to use bash if/else statements inside makefiles:
 #    https://stackoverflow.com/a/58602879/4561887
+# 1. Meaning of the variable `MAKE` in a Makefile: https://stackoverflow.com/a/68240460/4561887
+# 1. Phony targets: https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 #
 
 #
@@ -94,12 +96,13 @@ fast_malloc_url := git@github.com:ElectricRCAircraftGuy/fast_malloc.git
 glibc_version := 2.26
 glibc_alt_wget_url := https://ftpmirror.gnu.org/libc/glibc-$(glibc_version).tar.xz
 
-# Build and install directories (required only on a repo-by-repo basis)
+# Build and install directories (required for each malloc implementation, to know where that
+# implementation's `lib*.so` file will be)
 glibc_build_dir := $(topdir)/glibc-build
 glibc_install_dir := $(topdir)/glibc-install
 tcmalloc_install_dir := $(topdir)/tcmalloc-install
 jemalloc_install_dir := $(topdir)/jemalloc-install
-# not required for fast_malloc
+fast_malloc_build_dir := $(topdir)/fast_malloc/build
 
 
 #
@@ -110,7 +113,7 @@ jemalloc_install_dir := $(topdir)/jemalloc-install
 # Targets
 #
 
-.PHONY: all download build collect_results plot_results upload_results
+.PHONY: all download build collect_results plot_results upload_results clean
 
 all: download build collect_results plot_results
 
@@ -119,13 +122,13 @@ download:
 	@echo "Downloading & updating these malloc implementations: [$(implem_list)]"
 
 # system_default (include this for completeness)
-	@echo "-----"
+	@echo "====="
 ifeq ($(findstring system_default,$(implem_list)),system_default)
 	@echo "system_default already ready"
 endif
 
 # glibc
-	@echo "-----"
+	@echo "====="
 ifeq ($(findstring glibc,$(implem_list)),glibc)
 ifeq ($(use_git),1)
 	@if [ ! -d glibc ]; then \
@@ -141,7 +144,7 @@ endif
 endif
 
 # tcmalloc
-	@echo "-----"
+	@echo "====="
 ifeq ($(findstring tcmalloc,$(implem_list)),tcmalloc)
 	@if [ ! -d gperftools ]; then \
 		git clone $(tcmalloc_url); \
@@ -152,7 +155,7 @@ ifeq ($(findstring tcmalloc,$(implem_list)),tcmalloc)
 endif
 
 # jemalloc
-	@echo "-----"
+	@echo "====="
 ifeq ($(findstring jemalloc,$(implem_list)),jemalloc)
 	@if [ ! -d jemalloc ]; then \
 		git clone $(jemalloc_url); \
@@ -163,7 +166,7 @@ ifeq ($(findstring jemalloc,$(implem_list)),jemalloc)
 endif
 
 # fast_malloc
-	@echo "-----"
+	@echo "====="
 ifeq ($(findstring fast_malloc,$(implem_list)),fast_malloc)
 	@if [ ! -d fast_malloc ]; then \
 		git clone $(fast_malloc_url); \
@@ -174,11 +177,11 @@ ifeq ($(findstring fast_malloc,$(implem_list)),fast_malloc)
 endif
 
 
-#
+# Individual build targets for each malloc implementation
+
 # A couple of notes about GNU libc:
 #  1) building in source dir is not supported... that's why we build in separate folder
 #  2) building only benchmark utilities is not supported... that's why we build everything
-#
 $(glibc_install_dir)/lib/libc.so.6:
 	@echo "Building GNU libc... go get a cup of coffee... this will take time!"
 	mkdir -p $(glibc_build_dir)
@@ -187,7 +190,12 @@ $(glibc_install_dir)/lib/libc.so.6:
 		make $(parallel_flags) && \
 		make bench-build $(parallel_flags) && \
 		make install
-	[ -x $(glibc_build_dir)/benchtests/bench-malloc-thread ] && echo "GNU libc benchmarking utility is ready!" || echo "Cannot find GNU libc benchmarking utility! Cannot collect benchmark results"
+	@if [ -x $(glibc_build_dir)/benchtests/bench-malloc-thread ]; then \
+		echo ">>> GNU libc benchmarking utility is ready! <<<"; \
+	else \
+		echo ">>> ERROR: Cannot find GNU libc benchmarking utility! Cannot collect benchmark"; \
+		echo "    results. <<<"; \
+	fi
 
 $(tcmalloc_install_dir)/lib/libtcmalloc.so:
 	cd gperftools && \
@@ -202,19 +210,57 @@ $(jemalloc_install_dir)/lib/libjemalloc.so:
 		./configure --prefix=$(jemalloc_install_dir) && \
 		make && \
 		( make install || true )
-		
+
+$(fast_malloc_build_dir)/libfast_malloc.so:
+	cd fast_malloc && \
+		./build_all.sh
+
+clean:
+	@echo "Removing all lib*.so target files so that 'make build' will build them again."
+	rm "$(glibc_install_dir)/lib/libc.so.6"
+	rm "$(tcmalloc_install_dir)/lib/libtcmalloc.so"
+	rm "$(jemalloc_install_dir)/lib/libjemalloc.so"
+	rm "$(fast_malloc_build_dir)/libfast_malloc.so"
+
+
 build:
+	@echo "Building these malloc implementations: [$(implem_list)], so long as their lib*.so "
+	@echo "shared object files do NOT already exist. To force rebuilding, run 'make clean' first."
+
+# glibc
 ifeq ($(findstring glibc,$(implem_list)),glibc)
+	@echo "====="
+	@echo "glibc"
 	$(MAKE) $(glibc_install_dir)/lib/libc.so.6
 endif
+
+# tcmalloc
 ifeq ($(findstring tcmalloc,$(implem_list)),tcmalloc)
+	@echo "====="
+	@echo "tcmalloc"
 	$(MAKE) $(tcmalloc_install_dir)/lib/libtcmalloc.so
 endif
+
+# jemalloc
 ifeq ($(findstring jemalloc,$(implem_list)),jemalloc)
+	@echo "====="
+	@echo "jemalloc"
 	$(MAKE) $(jemalloc_install_dir)/lib/libjemalloc.so
 endif
-	@echo "Congrats! Successfully built all [$(implem_list)] malloc implementations to test."
-	
+
+# fast_malloc
+ifeq ($(findstring fast_malloc,$(implem_list)),fast_malloc)
+	@echo "====="
+	@echo "fast_malloc"
+	$(MAKE) $(fast_malloc_build_dir)/libfast_malloc.so
+endif
+
+# summary
+	@echo "====="
+	@echo "Congrats! Successfully built all malloc implementations to test,"
+	@echo "  namely [$(implem_list)]."
+
+
 collect_results:
 	@mkdir -p $(results_dir)
 
