@@ -121,6 +121,8 @@ all: download build collect_results plot_results
 
 
 download:
+	@echo "=========="
+	@echo "=========="
 	@echo "Downloading & updating these malloc implementations: [$(implem_list)]"
 
 # system_default (include this for completeness)
@@ -226,6 +228,8 @@ clean:
 
 
 build:
+	@echo "=========="
+	@echo "=========="
 	@echo "Building these malloc implementations: [$(implem_list)], so long as their lib*.so "
 	@echo "shared object files do NOT already exist. To force rebuilding, run 'make clean' first."
 

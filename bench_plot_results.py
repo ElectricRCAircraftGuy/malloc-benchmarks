@@ -8,7 +8,7 @@ import json
 import matplotlib.pyplot as plt
 
 filled_markers = ('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X')
-colours = ('r', 'g', 'b', 'black', 'yellow', 'purple')
+colours = ('r', 'g', 'b', 'black', 'orange', 'purple', 'cyan', 'brown')
 
 def plot_graphs(outfilename, benchmark_dict):
     """Plots the given dictionary of benchmark results
@@ -61,7 +61,7 @@ def plot_graphs(outfilename, benchmark_dict):
         Y = [y["time_per_iteration"] for y in data_list_of_dicts]
 
         lines = plt.plot(X, Y, '-' + filled_markers[nmarker], label=impl_name)
-        plt.setp(lines, 'color', colours[nmarker])
+        plt.setp(lines, color=colours[nmarker])
         
         # remember max X/Y
         # In case you only ran some of the tests, don't attempt to get `max()` on an empty list--ie:
@@ -100,7 +100,7 @@ def plot_graphs(outfilename, benchmark_dict):
         Y = [y["max_rss"]/1000 for y in data_list_of_dicts]
 
         lines = plt.plot(X, Y, '-' + filled_markers[nmarker], label=impl_name)
-        plt.setp(lines, 'color', colours[nmarker])
+        plt.setp(lines, color=colours[nmarker])
 
         # remember max X/Y
         if X:
