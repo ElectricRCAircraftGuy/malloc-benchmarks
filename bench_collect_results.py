@@ -14,16 +14,22 @@ import subprocess
 internal_benchmark_util = 'glibc-build/benchtests/bench-malloc-thread'
 
 glibc_install_dir = 'glibc-install'
-tcmalloc_install_dir = 'tcmalloc-install'
-jemalloc_install_dir = 'jemalloc-install'
 
+# Specify the 'lib*.so' shared object libraries we will need to preload via the `LD_PRELOAD` trick
+# for each malloc implementation
+# key:   malloc implementation name
+# value: the path to the 'lib*.so' shared object library or libraries to preload
 impl_preload_libs = {
     'system_default':'',
     'glibc': '',
     
-    # to test tcmalloc and jemalloc implementations we simply use the LD_PRELOAD trick:
-    'tcmalloc': tcmalloc_install_dir + '/lib/libtcmalloc.so',
-    'jemalloc': jemalloc_install_dir + '/lib/libjemalloc.so'
+    # To test tcmalloc and jemalloc implementations we simply use the LD_PRELOAD trick:
+    'tcmalloc': 'tcmalloc-install/lib/libtcmalloc.so',
+    'jemalloc': 'jemalloc-install/lib/libjemalloc.so',
+
+    # We will use the LD_PRELOAD trick for fast_malloc too
+    'fast_malloc_1MiB': 'fast_malloc/build/libfast_malloc_1MiB.so',
+    'fast_malloc_1GiB': 'fast_malloc/build/libfast_malloc_1GiB.so',
 }
 
 # to successfully preload the tcmalloc,jemalloc libs we will also need to preload the C++ standard
@@ -31,6 +37,9 @@ impl_preload_libs = {
 preload_required_libs= [ 'libstdc++.so.6', 'libgcc_s.so.1' ]
 preload_required_libs_fullpaths = []
 
+# Specify exactly how to call the benchmark utility for each malloc implementation
+# key:   malloc implementation name
+# value: the exact call to the internal benchmark utility
 benchmark_util = {
     'system_default': internal_benchmark_util,
     
@@ -42,6 +51,9 @@ benchmark_util = {
     
     'tcmalloc': internal_benchmark_util,
     'jemalloc': internal_benchmark_util,
+
+    'fast_malloc_1MiB': internal_benchmark_util,
+    'fast_malloc_1GiB': internal_benchmark_util,
 }
 
 def find(name, paths):
@@ -91,7 +103,7 @@ def check_requirements():
         print("Found required lib {}".format(full_path))
         preload_required_libs_fullpaths.append(full_path)
 
-def run_benchmark(outfile,thread_values,impl_name):
+def run_benchmark(outfile, thread_values, impl_name):
     global preload_required_libs_fullpaths, impl_preload_libs
     
     if impl_name not in impl_preload_libs:
@@ -109,22 +121,26 @@ def run_benchmark(outfile,thread_values,impl_name):
 
         try:
             # 1. Set the `LD_PRELOAD` environment variable
+
             os.environ["LD_PRELOAD"] = impl_preload_libs[impl_name]
-            if len(os.environ["LD_PRELOAD"])>0:
-                # the tcmalloc/jemalloc shared libs require in turn C++ libs:
+
+            # The `tcmalloc` and `jemalloc` shared libs require some additional C++ libs, so let's
+            # load those too if necessary.
+            if impl_name in ["tcmalloc", "jemalloc"]:
                 #print("preload_required_libs_fullpaths is:", preload_required_libs_fullpaths)
                 for lib in preload_required_libs_fullpaths:
                     os.environ["LD_PRELOAD"] = os.environ["LD_PRELOAD"] + ':' + lib
                     
             utility_fname = benchmark_util[impl_name]
                     
-            cmd = "{} {} >/tmp/benchmark-output".format(utility_fname, nthreads)
+            cmd = "{} {} | tee /tmp/benchmark-output".format(utility_fname, nthreads)
             full_cmd = "LD_PRELOAD='{}' {}".format(os.environ["LD_PRELOAD"], cmd)
 
             print("Running this benchmark cmd for nthreads={}:".format(nthreads))
             print("  {}".format(full_cmd))
 
             # 2. Call the benchmark cmd
+
             # the subprocess.check_output() method does not seem to work fine when launching
             # the ld-linux-x86-64.so.2 with --library-path
             #stdout = subprocess.check_output([utility_fname, nthreads])
@@ -135,7 +151,7 @@ def run_benchmark(outfile,thread_values,impl_name):
             of.write(stdout)
             if nthreads != last_nthreads:
                 of.write(',')
-            success=success+1
+            success += 1
             
         except OSError as ex:
             print("Failed running malloc benchmarking utility: {}. Skipping.".format(ex))
@@ -151,24 +167,26 @@ def main(args):
         sys.exit(os.EX_USAGE)
 
     # parse args
-    implementations = args[0].split()
-    outfile_path_prefix,outfile_postfix = os.path.split(args[1])
+    implementations_to_test = args[0].split()
+    outfile_path_prefix, outfile_postfix = os.path.split(args[1])
     thread_values = args[2:]
     
     check_requirements()
     
     success = 0
-    for idx in range(0,len(implementations)):
-        if implementations[idx] not in impl_preload_libs:
-            print("Unknown settings required for testing implementation '{}'".format(implementations[idx]))
+    for implementation in implementations_to_test:
+        if implementation not in impl_preload_libs:
+            print(("Unknown settings required for testing implementation \"{}\". Update this " +
+                   "python script to know how to test this implementation too.").format(
+                   implementation))
             sys.exit(3)
-            
-        outfile = os.path.join(outfile_path_prefix, implementations[idx] + '-' + outfile_postfix)
+
+        outfile = os.path.join(outfile_path_prefix, implementation + '-' + outfile_postfix)
         print("----------------------------------------------------------------------------------------------")
-        print("Testing implementation '{}'. Saving results into '{}'".format(implementations[idx],outfile))
+        print("Testing implementation '{}'.\nSaving results into '{}'".format(implementation, outfile))
         
         print("Will run tests for {} different numbers of threads.".format(len(thread_values)))
-        success = success + run_benchmark(outfile,thread_values,implementations[idx])
+        success = success + run_benchmark(outfile, thread_values, implementation)
 
     print("----------------------------------------------------------------------------------------------")
     return success

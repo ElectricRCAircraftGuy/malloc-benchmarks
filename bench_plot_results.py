@@ -133,10 +133,8 @@ def plot_graphs(outfilename, benchmark_dict):
 
 
 def main(args):
-    """Program Entry Point
-    """
     if len(args) < 2:
-        print('Usage: %s <image-output-file> <file1> <file2> ...' % sys.argv[0])
+        print('Usage: %s <image-output-file> <file1> <file2> <fileN...>' % sys.argv[0])
         sys.exit(os.EX_USAGE)
 
     benchmark_dict = {}
@@ -163,6 +161,8 @@ def main(args):
     plot_graphs(args[0], benchmark_dict)
 
 if __name__ == '__main__':
+    """Program Entry Point
+    """
     main(sys.argv[1:])
 
 

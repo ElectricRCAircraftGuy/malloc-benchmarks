@@ -8,6 +8,8 @@
 # 2. Google perftools (tcmalloc)
 # 3. jemalloc
 # 4. fast_malloc
+#   1. fast_malloc_1MiB = with a 1 MiB static heap
+#   2. fast_malloc_1GiB = with a 1 GiB static heap
 #
 # First tested with these versions:
 # 1. GNU libc 2.26
@@ -71,7 +73,7 @@ ifdef IMPLEMENTATIONS
 implem_list := $(IMPLEMENTATIONS)
 else
 # default value
-implem_list := system_default glibc tcmalloc jemalloc fast_malloc
+implem_list := system_default glibc tcmalloc jemalloc fast_malloc_1MiB fast_malloc_1GiB
 endif
 
 
@@ -269,18 +271,21 @@ collect_results:
 	@echo -n "Number of CPU cores: "					>>$(results_dir)/hardware-inventory.txt
 	@grep "processor" /proc/cpuinfo | wc -l				>>$(results_dir)/hardware-inventory.txt
 	# NB: you may need to install `numactl` first with `sudo apt install numactl`.
-	@(which numactl >/dev/null 2>&1) && echo "NUMA information (from 'numactl -H'):" >>$(results_dir)/hardware-inventory.txt
+	@(which numactl >/dev/null 2>&1) && echo "NUMA information (from 'numactl -H'):" \
+		>>$(results_dir)/hardware-inventory.txt
 	@(which numactl >/dev/null 2>&1) && numactl -H >>$(results_dir)/hardware-inventory.txt
 
 	@echo "Starting to collect performance benchmarks."
-	./bench_collect_results.py "$(implem_list)" $(results_dir)/$(benchmark_result_json) $(benchmark_nthreads)
+	./bench_collect_results.py "$(implem_list)" $(results_dir)/$(benchmark_result_json) \
+		$(benchmark_nthreads)
 
 plot_results:
 	./bench_plot_results.py $(results_dir)/$(benchmark_result_png) $(results_dir)/*.json
 
-# the following target is mostly useful only to the maintainer of the github project:
+# The following target is primarily intended to be used by the maintainer of the github project:
 upload_results:
-	git add -f $(results_dir)/*$(benchmark_result_json) $(results_dir)/$(benchmark_result_png) $(results_dir)/hardware-inventory.txt
+	git add -f $(results_dir)/*$(benchmark_result_json) $(results_dir)/$(benchmark_result_png) \
+		$(results_dir)/hardware-inventory.txt
 	git commit -m "Adding results from folder $(results_dir) to the GIT repository"
 	@echo "Run 'git push' to push online your results (requires GIT repo write access)"
 
