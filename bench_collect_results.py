@@ -110,9 +110,9 @@ def run_benchmark(outfile, thread_values, impl_name):
         print("Unknown settings required for testing implementation {}".format(impl_name))
         sys.exit(3)
     
-    of = open(outfile, 'w')
-    of.write('[')
-    
+    json_file = open(outfile, 'w')
+    json_file.write('[\n')
+
     success = 0
     last_nthreads = thread_values[len(thread_values)-1]
     bm = {}
@@ -147,16 +147,34 @@ def run_benchmark(outfile, thread_values, impl_name):
             os.system(cmd)
             stdout = open('/tmp/benchmark-output', 'r').read()
 
+            # Strip the "fast malloc stats" summary, if it exists, from before the JSON data.
+            # Also ensure the `stdout` string is not empty, in case of a program crash.
+            if "fast_malloc" in impl_name and stdout:
+                # If the JSON data is NOT the very first thing, it means the stats summary is first
+                if stdout[0] != '{':
+                    split_text = stdout.split('{', 1)
+                    stats_summary = split_text[0]
+                    json_data = "{" + split_text[1]
+                    stdout = json_data
+                    stats_summary = "NTHREADS = {}\n".format(nthreads) + stats_summary
+
+                    stats_filename = os.path.dirname(outfile) + '/{}-stats.txt'.format(impl_name)
+                    stats_file = open(stats_filename, 'a')
+                    stats_file.write(stats_summary + '\n===========================\n')
+                    stats_file.close()
+
             # produce valid JSON output:
-            of.write(stdout)
+            json_file.write(stdout)
             if nthreads != last_nthreads:
-                of.write(',')
+                json_file.write(',')
+            json_file.write('\n')
             success += 1
             
         except OSError as ex:
             print("Failed running malloc benchmarking utility: {}. Skipping.".format(ex))
 
-    of.write(']\n')
+    json_file.write(']\n')
+    json_file.close()
     return success
 
 def main(args):
@@ -182,13 +200,13 @@ def main(args):
             sys.exit(3)
 
         outfile = os.path.join(outfile_path_prefix, implementation + '-' + outfile_postfix)
-        print("----------------------------------------------------------------------------------------------")
+        print("==============================================================================================")
         print("Testing implementation '{}'.\nSaving results into '{}'".format(implementation, outfile))
         
         print("Will run tests for {} different numbers of threads.".format(len(thread_values)))
         success = success + run_benchmark(outfile, thread_values, implementation)
 
-    print("----------------------------------------------------------------------------------------------")
+    print("==============================================================================================")
     return success
 
 if __name__ == '__main__':
